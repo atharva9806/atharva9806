@@ -82,6 +82,60 @@ export function findingCard(claim) {
   ]);
 }
 
+/**
+ * State what era the dataset actually covers.
+ *
+ * Ball-by-ball data does not go back to the start of cricket. A visitor looking
+ * up a player whose career straddles the start of coverage will otherwise read
+ * a partial record as a complete one, which is the single most misleading thing
+ * this site could do. So the range is computed from the data itself and shown
+ * wherever it matters.
+ */
+export function coverageNotice(manifest) {
+  if (manifest.provenance?.dataset === 'demo') return null;
+  const spans = Object.values(manifest.formats || {})
+    .map((f) => [f.firstDate, f.lastDate]).filter(([a]) => a);
+  if (!spans.length) return null;
+  const from = spans.map(([a]) => a).sort()[0].slice(0, 4);
+  const to = spans.map(([, b]) => b).sort().reverse()[0].slice(0, 4);
+  return h('div', { class: 'notice notice--live', role: 'note' }, [
+    h('span', { class: 'notice__icon', text: 'ⓘ', 'aria-hidden': 'true' }),
+    h('div', {}, [
+      h('strong', { text: `Ball-by-ball coverage runs ${from}–${to}` }),
+      h('p', {}, [
+        document.createTextNode(
+          'Every number here is computed from deliveries inside that window. Careers that '
+          + `began before ${from} are therefore partial — the earlier seasons are not in any `
+          + 'openly licensed ball-by-ball dataset. Totals for players who retired long ago '
+          + 'will not match their full career records. '),
+        h('a', { href: '#/about', text: 'What this covers' }),
+      ]),
+    ]),
+  ]);
+}
+
+/**
+ * A hero block. Used once per page at most - it is a signpost, not decoration.
+ */
+export function hero({ eyebrow, title, body, actions = [], live = false }) {
+  return h('div', { class: 'hero' }, [
+    eyebrow
+      ? h('div', { class: 'hero__eyebrow' }, [
+        live ? h('span', { class: 'hero__dot', 'aria-hidden': 'true' }) : null,
+        document.createTextNode(eyebrow),
+      ].filter(Boolean))
+      : null,
+    h('h1', { text: title }),
+    body ? h('p', { text: body }) : null,
+    actions.length
+      ? h('div', { class: 'hero__actions' }, actions.map((a) => h('a', {
+        class: a.primary ? 'btn btn--primary' : 'btn',
+        href: a.href, text: a.label, style: 'text-decoration:none',
+      })))
+      : null,
+  ]);
+}
+
 export function emptyState(title, detail) {
   return h('div', { class: 'empty' }, [
     h('h3', { text: title }),

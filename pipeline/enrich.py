@@ -29,6 +29,9 @@ from .styles import normalise_batting_style, normalise_bowling_style
 log = logging.getLogger(__name__)
 
 CURATED = ROOT / "data" / "styles.csv"
+# Generated from a published player-metadata table (see sources/playermeta.py).
+# Read before the curated file so hand-checked corrections still win.
+GENERATED = ROOT / "data" / "player_styles.csv"
 STYLE_CACHE = CACHE_DIR / "styles.json"
 
 FIELDS = ["name", "bowling_type", "batting_hand", "role", "country",
@@ -105,6 +108,7 @@ def resolve(names: set[str], registry: dict[str, str],
     """
     records: dict[str, dict] = {}
     records.update(load_cache())
+    records.update(load_csv(GENERATED))
     if extra_file:
         records.update(load_csv(extra_file))
     # The curated file wins over everything, including anything we scraped

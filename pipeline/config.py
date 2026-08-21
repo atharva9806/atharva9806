@@ -126,7 +126,7 @@ THRESHOLDS = Thresholds()
 class NetConfig:
     user_agent: str = os.environ.get(
         "CRICKET_UA",
-        "cricket-analytics/1.0 (open-source analytics project; contact via repository issues)",
+        "criclysis/1.0 (open-source cricket analytics project; contact via repository issues)",
     )
     # Seconds between requests to the same host. Deliberately conservative.
     delay_seconds: float = float(os.environ.get("CRICKET_DELAY", "2.0"))

@@ -147,12 +147,13 @@ async function render() {
     return;
   }
 
-  clear(main).appendChild(h('div', { class: 'spinner', role: 'status', 'aria-label': 'Loading' }));
+  clear(main).appendChild(skeletonFor(route.name));
   try {
     const view = await loader();
     if (token !== renderToken) return;             // a newer navigation won
     const node = await view.render({ ...app, route, store });
     if (token !== renderToken) return;
+    node.classList.add('view');
     clear(main).appendChild(node);
     main.focus({ preventScroll: true });
     window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
@@ -167,15 +168,57 @@ async function render() {
   }
 }
 
+/**
+ * A shaped placeholder while a view loads.
+ *
+ * A skeleton in roughly the layout of what is coming reads as "this is
+ * arriving"; a spinner in the middle of an empty page reads as "something may
+ * be wrong". The shapes differ per route so the page does not visibly jump.
+ */
+function skeletonFor(name) {
+  const box = h('div', { class: 'view' });
+  box.appendChild(h('div', { class: 'skeleton skeleton--title' }));
+  box.appendChild(h('div', { class: 'skeleton skeleton--line', style: 'width:62%' }));
+  box.appendChild(h('div', { class: 'skeleton skeleton--line', style: 'width:44%;margin-bottom:1.4rem' }));
+
+  if (name === '' || name === 'player') {
+    const tiles = h('div', { class: 'grid grid--4', style: 'margin-bottom:1.1rem' });
+    for (let i = 0; i < 4; i += 1) tiles.appendChild(h('div', { class: 'skeleton skeleton--tile' }));
+    box.appendChild(tiles);
+  }
+  const charts = h('div', { class: 'grid grid--2' });
+  for (let i = 0; i < 2; i += 1) charts.appendChild(h('div', { class: 'skeleton skeleton--chart' }));
+  box.appendChild(charts);
+  box.setAttribute('role', 'status');
+  box.setAttribute('aria-label', 'Loading');
+  return box;
+}
+
+/** Deepen the header shadow once the page scrolls under it. */
+function watchScroll() {
+  const header = document.querySelector('.app-header');
+  if (!header) return;
+  const update = () => {
+    header.dataset.scrolled = String(window.scrollY > 6);
+  };
+  update();
+  window.addEventListener('scroll', update, { passive: true });
+}
+
 function renderFooter(manifest) {
   const foot = document.getElementById('footer-sources');
   const demo = manifest.provenance?.dataset === 'demo';
   clear(foot);
-  foot.appendChild(h('span', {
-    text: demo
-      ? 'Simulated demo dataset — no real players. '
-      : 'Ball-by-ball data from Cricsheet (CC BY 4.0). ',
-  }));
+  if (demo) {
+    foot.appendChild(h('span', { text: 'Simulated demo dataset — no real players. ' }));
+  } else {
+    // CC BY 4.0 requires attribution wherever the data is shown.
+    foot.appendChild(h('span', {}, [
+      document.createTextNode('Ball-by-ball data from '),
+      h('a', { href: 'https://cricsheet.org', text: 'Cricsheet', rel: 'noopener' }),
+      document.createTextNode(', licensed CC BY 4.0. '),
+    ]));
+  }
   foot.appendChild(h('span', {
     class: 'muted',
     text: `Built ${manifest.generated?.slice(0, 10) || 'unknown'} · ${manifest.playerCount} players`,
@@ -187,6 +230,7 @@ function renderFooter(manifest) {
    ------------------------------------------------------------------------- */
 (async function start() {
   initTheme();
+  watchScroll();
   try {
     const data = await bootstrap();
     Object.assign(app, data);

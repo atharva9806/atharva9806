@@ -4,24 +4,36 @@ import { fmt } from '../lib/format.js';
 import { barChart } from '../charts/index.js';
 import { figure, token } from '../charts/core.js';
 import { simpleTable } from '../lib/table.js';
-import { card, orderFormats, pageHead, statTile, datasetNotice } from './components.js';
+import {
+  card, coverageNotice, datasetNotice, hero, orderFormats, statTile,
+} from './components.js';
 
 export async function render({ manifest, players }) {
   const root = h('div', { class: 'stack' });
   const notice = datasetNotice(manifest);
   if (notice) root.appendChild(notice);
 
-  root.appendChild(pageHead(
-    'Cricket analytics, built from every ball',
-    'Career records, strengths and weaknesses against each bowling type and phase of an '
-    + 'innings, and bowling and batting plans for any player or side — all derived from '
-    + 'ball-by-ball data rather than scorecard totals.',
-  ));
-
-  // --- headline counts --------------------------------------------------
   const formats = orderFormats(Object.keys(manifest.formats || {}));
   const totalMatches = formats.reduce((s, f) => s + (manifest.formats[f].matches || 0), 0);
   const totalBalls = formats.reduce((s, f) => s + (manifest.formats[f].deliveries || 0), 0);
+  const live = manifest.provenance?.dataset !== 'demo';
+
+  const coverage = coverageNotice(manifest);
+  if (coverage) root.appendChild(coverage);
+  root.appendChild(hero({
+    eyebrow: live
+      ? `Live dataset · ${fmt.int(totalBalls)} deliveries`
+      : 'Simulated demo dataset',
+    live,
+    title: 'Cricket analysis, built from every ball',
+    body: 'Career records, strengths and weaknesses against each bowling type and phase of '
+      + 'an innings, and bowling and batting plans for any player or side — all derived from '
+      + 'ball-by-ball data rather than scorecard totals.',
+    actions: [
+      { label: 'Browse players', href: '#/players', primary: true },
+      { label: 'Open the strategy planner', href: '#/strategy' },
+    ],
+  }));
 
   root.appendChild(h('div', { class: 'grid grid--4' }, [
     statTile('Players', fmt.int(manifest.playerCount), 'with a qualifying record'),
@@ -105,10 +117,16 @@ export async function render({ manifest, players }) {
 }
 
 function linkCard(title, body, href, cta) {
-  return card([
+  const node = card([
     h('h3', { text: title }),
     h('p', { class: 'small', text: body, style: 'color:var(--text-secondary)' }),
     h('a', { class: 'btn btn--primary', href, text: cta,
       style: 'display:inline-block;text-decoration:none' }),
-  ]);
+  ], 'card--interactive');
+  // The whole card is the target; the button inside stays keyboard-reachable.
+  node.addEventListener('click', (ev) => {
+    if (ev.target.closest('a')) return;
+    window.location.hash = href;
+  });
+  return node;
 }

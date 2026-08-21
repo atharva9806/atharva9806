@@ -1,4 +1,4 @@
-# Cricket Analytics
+# Criclysis
 
 A cricket analytics website built from **ball-by-ball data**: career records, an
 automatic read on each player's strengths and weaknesses, interactive charts and
@@ -58,6 +58,7 @@ Every chart has a table view and a CSV export.
 | Source | What it provides | Licence | Default |
 |---|---|---|---|
 | [Cricsheet](https://cricsheet.org) | Ball-by-ball data for every delivery: batter, bowler, runs, extras, dismissal | CC BY 4.0 | **Used** |
+| Player metadata table | Bowling style, batting hand, playing role — keyed on Cricsheet id | See [DATA_SOURCES](docs/DATA_SOURCES.md) | **Used** |
 | [ESPNcricinfo](https://www.espncricinfo.com) | Player profile metadata — bowling style, batting hand, playing role | Proprietary | Opt-in |
 | [ICC](https://www.icc-cricket.com) | Official team and player rankings | Proprietary | Opt-in |
 
@@ -92,6 +93,17 @@ everything else on the site works without them.
 If enrichment is blocked or you skip it, unresolved bowlers simply drop out of
 the bowling-type splits. Every other statistic is unaffected, and the build
 summary and the Method page both report how many bowlers are missing a style.
+
+## What the data covers
+
+Ball-by-ball coverage runs **2001–2026** (Tests from 2001, ODIs from 2002, T20Is
+from 2005) — 6,872 matches and 3.8 million deliveries. Careers that began before
+that are recorded only from the start of coverage, so totals for players who
+retired long ago are partial and will not match their full career records. The
+site computes this range from the data and states it on the home page, on every
+player profile and on the Method page.
+
+Full provenance, licensing and limitations: **[docs/DATA_SOURCES.md](docs/DATA_SOURCES.md)**.
 
 ## How a strength or weakness is decided
 

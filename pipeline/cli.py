@@ -42,7 +42,9 @@ def cmd_fetch(args) -> int:
     failures = 0
     for fmt in args.formats:
         try:
-            path = cricsheet.download_archive(fmt, use_cache=not args.refresh)
+            path = cricsheet.download_archive(
+                fmt, use_cache=not args.refresh,
+                allow_mirror=not getattr(args, "no_mirror", False))
             size = path.stat().st_size / 1e6
             log.info("%-5s %s (%.1f MB)", fmt, path, size)
         except net.Blocked as exc:
@@ -225,6 +227,8 @@ def build_parser() -> argparse.ArgumentParser:
     add_formats(p_fetch)
     p_fetch.add_argument("--refresh", action="store_true",
                          help="ignore the cache and re-download")
+    p_fetch.add_argument("--no-mirror", action="store_true", dest="no_mirror",
+                         help="only use cricsheet.org; do not fall back to a mirror")
     p_fetch.set_defaults(func=cmd_fetch)
 
     p_enrich = sub.add_parser("enrich", help="resolve bowling styles")
@@ -262,6 +266,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_formats(p_all)
     p_all.add_argument("--out", default=str(WEB_DATA_DIR))
     p_all.add_argument("--refresh", action="store_true")
+    p_all.add_argument("--no-mirror", action="store_true", dest="no_mirror")
     p_all.add_argument("--enrich", choices=["none", "espncricinfo"], default="none")
     p_all.add_argument("--styles-file")
     p_all.add_argument("--limit", type=int)

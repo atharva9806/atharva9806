@@ -45,6 +45,8 @@ class Aggregator:
         self.team_of: dict[str, set[str]] = defaultdict(set)
         self.matches = 0
         self.deliveries = 0
+        self.first_date = ""
+        self.last_date = ""
         self.venues: dict[str, dict] = {}
         self.unknown_styles: set[str] = set()
 
@@ -71,6 +73,11 @@ class Aggregator:
             return
         self.matches += 1
         self.deliveries += len(deliveries)
+        if match.date:
+            if not self.first_date or match.date < self.first_date:
+                self.first_date = match.date
+            if match.date > self.last_date:
+                self.last_date = match.date
         self.registry.update(match.registry)
         for team, squad in match.players.items():
             for name in squad:
@@ -234,4 +241,6 @@ class Aggregator:
             "players": len(self.players),
             "venues": len(self.venues),
             "bowlersMissingStyle": len(self.unknown_styles),
+            "firstDate": self.first_date,
+            "lastDate": self.last_date,
         }

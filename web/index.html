@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cricket Analytics — player strengths, weaknesses and match strategy</title>
+<title>Criclysis — cricket player analysis, strengths, weaknesses and match strategy</title>
 <meta name="description" content="Ball-by-ball cricket analytics: career records, strengths and weaknesses against every bowling type and phase, interactive charts, and bowling and batting plans for any player or team.">
 <meta name="color-scheme" content="light dark">
 <link rel="stylesheet" href="assets/css/app.css">
@@ -14,9 +14,9 @@
 
 <header class="app-header">
   <div class="app-header__inner">
-    <a class="brand" href="#/" aria-label="Cricket Analytics home">
-      <span class="brand__mark" aria-hidden="true">◍</span>
-      <span>Cricket&nbsp;Analytics</span>
+    <a class="brand" href="#/" aria-label="Criclysis home">
+      <span class="brand__mark" aria-hidden="true">◎</span>
+      <span>Criclysis</span>
     </a>
     <nav class="nav" id="nav" aria-label="Main">
       <a href="#/">Overview</a>
@@ -34,6 +34,7 @@
         <input class="input" id="search-input" type="search" placeholder="Search players…"
                autocomplete="off" role="combobox" aria-expanded="false"
                aria-controls="search-results" aria-autocomplete="list">
+        <kbd class="search__kbd" aria-hidden="true">/</kbd>
         <div class="search__results" id="search-results" role="listbox" aria-label="Player results"></div>
       </div>
       <button class="btn btn--icon" id="theme-toggle" type="button"
@@ -43,7 +44,7 @@
 </header>
 
 <main id="main" tabindex="-1">
-  <div class="spinner" role="status" aria-label="Loading"></div>
+  <div class="spinner" role="status" aria-label="Loading Criclysis"></div>
 </main>
 
 <footer class="app-footer">

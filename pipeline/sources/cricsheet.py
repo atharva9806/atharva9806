@@ -29,6 +29,39 @@ log = logging.getLogger(__name__)
 BASE = SOURCES["cricsheet"]["base"]
 REGISTER_URL = f"{BASE}/register/people.csv"
 
+# Cricsheet filters automated traffic, which means a download can fail from a
+# CI runner, a cloud VM or a corporate egress range while working fine from a
+# laptop. Several projects therefore mirror the archives as GitHub Release
+# assets. We try Cricsheet first - it is the source, and it is always current -
+# and fall back to a mirror rather than failing the build outright.
+#
+# Mirrors carry the same CC BY 4.0 Cricsheet data; the attribution obligation is
+# unchanged and travels with it.
+MIRRORS = [
+    {
+        "name": "pitchnama data-mirror",
+        "base": "https://github.com/himmatsgrewal/pitchnama/releases/download/data-mirror",
+        "files": {
+            "test": "test_male_json.zip",
+            "odi": "odi_male_json.zip",
+            "t20i": "t20i_male_json.zip",
+            "ipl": "ipl_male_json.zip",
+            "bbl": "bbl_male_json.zip",
+            "psl": "psl_male_json.zip",
+        },
+    },
+]
+
+
+def mirror_urls(fmt: str) -> list[tuple[str, str]]:
+    """(mirror name, url) for every mirror that carries this format."""
+    out = []
+    for mirror in MIRRORS:
+        filename = mirror["files"].get(fmt)
+        if filename:
+            out.append((mirror["name"], f"{mirror['base']}/{filename}"))
+    return out
+
 
 # ---------------------------------------------------------------------------
 # Normalised records
@@ -113,13 +146,39 @@ def archive_path(fmt: str) -> Path:
     return RAW_DIR / "cricsheet" / ALL_FORMATS[fmt]["archive"]
 
 
-def download_archive(fmt: str, *, use_cache: bool = True) -> Path:
-    """Fetch the bulk JSON archive for one format."""
+def download_archive(fmt: str, *, use_cache: bool = True,
+                     allow_mirror: bool = True) -> Path:
+    """Fetch the bulk JSON archive for one format.
+
+    Tries Cricsheet, then any configured mirror. Which source actually served
+    the file is logged, because it belongs in the build's provenance.
+    """
     spec = ALL_FORMATS[fmt]
-    url = f"{BASE}/downloads/{spec['archive']}"
     dest = archive_path(fmt)
-    log.info("downloading %s -> %s", url, dest)
-    return net.download(url, dest, use_cache=use_cache)
+    if use_cache and dest.exists() and dest.stat().st_size > 0:
+        log.info("using cached %s", dest.name)
+        return dest
+
+    attempts: list[tuple[str, str]] = [
+        ("cricsheet.org", f"{BASE}/downloads/{spec['archive']}")]
+    if allow_mirror:
+        attempts += mirror_urls(fmt)
+
+    errors: list[str] = []
+    for source, url in attempts:
+        try:
+            log.info("fetching %s from %s", fmt, source)
+            path = net.download(url, dest, use_cache=False)
+            log.info("  got %s (%.1f MB) from %s", dest.name,
+                     path.stat().st_size / 1e6, source)
+            return path
+        except (net.Blocked, net.FetchError) as exc:
+            log.warning("  %s did not serve %s: %s", source, fmt, exc)
+            errors.append(f"{source}: {exc}")
+
+    raise net.FetchError(
+        f"could not download the {fmt} archive from any source.\n  "
+        + "\n  ".join(errors))
 
 
 def phase_for(fmt: str, over: int) -> str:

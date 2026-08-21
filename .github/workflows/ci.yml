@@ -23,24 +23,15 @@ jobs:
       - name: Python pipeline tests
         run: python -m unittest discover -s tests -p "test_*.py" -v
 
-      - name: Build the demo dataset
-        run: python -m pipeline seed
+      # The committed dataset is real Cricsheet data, so a fresh seed must not
+      # overwrite it. Build the demo into a scratch directory instead: that
+      # still exercises simulate -> parse -> aggregate -> analyse -> export end
+      # to end, which is the point of the step.
+      - name: Build the demo dataset into a scratch directory
+        run: python -m pipeline seed --out /tmp/demo-data
 
-      - name: Verify the dataset
+      - name: Verify the committed dataset
         run: python scripts/check_dataset.py
 
       - name: JavaScript analysis tests
         run: node --test tests/js/*.test.mjs
-
-      # The demo dataset is committed, and it is reproducible by construction.
-      # If a change to the simulator or the pipeline alters it, that should be a
-      # deliberate, reviewed commit rather than a silent drift.
-      - name: Committed dataset matches a fresh build
-        run: |
-          if ! git diff --quiet -- web/data ':!web/data/manifest.json'; then
-            echo "::error::web/data differs from a fresh 'python -m pipeline seed'."
-            echo "Run 'make seed' and commit the result."
-            git diff --stat -- web/data ':!web/data/manifest.json'
-            exit 1
-          fi
-          echo "committed dataset is up to date"

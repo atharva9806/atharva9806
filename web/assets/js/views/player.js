@@ -20,7 +20,7 @@ import {
 import { figure, token } from '../charts/core.js';
 import { dataTable, simpleTable } from '../lib/table.js';
 import {
-  card, chip, datasetNotice, emptyState, findingCard, formatSwitcher,
+  card, chip, coverageNotice, datasetNotice, emptyState, findingCard, formatSwitcher,
   orderFormats, statTile,
 } from './components.js';
 
@@ -44,6 +44,8 @@ export async function render({ manifest, route, bySlug }) {
   const notice = datasetNotice(manifest);
   if (notice) root.appendChild(notice);
 
+  const coverage = coverageNotice(manifest);
+  if (coverage) root.appendChild(coverage);
   root.appendChild(header(record, manifest, bySlug));
 
   const controls = h('div', { class: 'row', style: 'justify-content:space-between' });
@@ -136,7 +138,7 @@ function battingSection(record, payload, manifest, fmtKey, cohort) {
     statTile('Runs', fmt.int(o.runs), `${o.innings} innings`),
     statTile('Average', fmt.avg(o.avg), `${m.notOuts} not out`),
     statTile('Strike rate', fmt.sr(o.sr), `${fmt.int(o.balls)} balls faced`),
-    statTile('Highest', fmt.score(m.highest, !m.highestNotOut), `${m.hundreds}×100  ${m.fifties}×50`),
+    statTile('Highest', fmt.score(m.highest, !m.highestNotOut), `${m.hundreds}×100 · ${m.fifties}×50`),
   ]));
 
   // --- percentile shape + cohort context -------------------------------
@@ -487,7 +489,7 @@ function battingSection(record, payload, manifest, fmtKey, cohort) {
 function bowlingSection(record, payload, manifest, fmtKey, cohort) {
   const bowl = payload.bowling;
   const o = bowl.overall;
-  const best = bowl.milestones.best;
+  const best = bowl.milestones.best;   // null when they have never taken one
   const section = h('section', { class: 'stack' });
 
   section.appendChild(h('h2', { text: 'Bowling' }));
@@ -495,8 +497,8 @@ function bowlingSection(record, payload, manifest, fmtKey, cohort) {
     statTile('Wickets', fmt.int(o.wickets), `${o.innings} innings`),
     statTile('Average', fmt.avg(o.avg), `strike rate ${fmt.num(o.sr, 1)}`),
     statTile('Economy', fmt.econ(o.econ), `${fmt.overs(o.balls)} overs`),
-    statTile('Best', fmt.figures(best.wickets, best.runs),
-      `${bowl.milestones.fiveWickets}×5w  ${bowl.milestones.fourWickets}×4w`),
+    statTile('Best', best ? fmt.figures(best.wickets, best.runs) : '—',
+      `${bowl.milestones.fiveWickets}×5w · ${bowl.milestones.fourWickets}×4w`),
   ]));
 
   const grid = h('div', { class: 'grid grid--2' });

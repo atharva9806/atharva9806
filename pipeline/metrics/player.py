@@ -213,10 +213,16 @@ class PlayerFormat:
 
     # ------------------------------------------------------------------
     def has_batting(self) -> bool:
-        return self.bat_overall.balls >= 30
+        return self.bat_overall.balls >= 60
 
     def has_bowling(self) -> bool:
-        return self.bowl_overall.balls >= 60
+        """Is this a real bowling record, or a part-timer filling in?
+
+        The gate used to be 60 balls, which gave specialist batters who bowl the
+        occasional over a full Bowling section reading "0 wickets, best 0/0".
+        Forty overs, or five wickets however few overs they came in, is the
+        point at which the splits start meaning something."""
+        return self.bowl_overall.balls >= 240 or self.bowl_overall.wickets >= 5
 
     def career_span(self) -> tuple[str, str]:
         dates = [i.date for i in self.bat_innings if i.date]

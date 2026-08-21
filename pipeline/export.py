@@ -87,6 +87,8 @@ def _career_milestones(innings: list) -> dict:
 
 
 def _bowling_best(innings: list) -> dict:
+    # A bowler with no wickets has no "best figures"; reporting 0/0 is worse
+    # than reporting nothing, because it looks like a real result.
     best = {"wickets": 0, "runs": 0}
     five_fors = four_fors = 0
     for inn in innings:
@@ -97,7 +99,10 @@ def _bowling_best(innings: list) -> dict:
         if (inn.wickets > best["wickets"] or
                 (inn.wickets == best["wickets"] and inn.runs < best["runs"])):
             best = {"wickets": inn.wickets, "runs": inn.runs}
-    return {"best": best, "fiveWickets": five_fors, "fourWickets": four_fors}
+    return {
+        "best": best if best["wickets"] > 0 else None,
+        "fiveWickets": five_fors, "fourWickets": four_fors,
+    }
 
 
 def build_player_record(record, analysis: dict, meta: dict, fmt: str) -> dict:
