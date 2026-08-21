@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cricket Analytics — player strengths, weaknesses and match strategy</title>
+<meta name="description" content="Ball-by-ball cricket analytics: career records, strengths and weaknesses against every bowling type and phase, interactive charts, and bowling and batting plans for any player or team.">
+<meta name="color-scheme" content="light dark">
+<link rel="stylesheet" href="assets/css/app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%232a78d6'/><circle cx='16' cy='16' r='7' fill='none' stroke='white' stroke-width='2.5'/><path d='M16 9v14' stroke='white' stroke-width='2.5'/></svg>">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="app-header">
+  <div class="app-header__inner">
+    <a class="brand" href="#/" aria-label="Cricket Analytics home">
+      <span class="brand__mark" aria-hidden="true">◍</span>
+      <span>Cricket&nbsp;Analytics</span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Main">
+      <a href="#/">Overview</a>
+      <a href="#/players">Players</a>
+      <a href="#/leaderboards">Leaderboards</a>
+      <a href="#/compare">Compare</a>
+      <a href="#/strategy">Strategy</a>
+      <a href="#/teams">Teams</a>
+      <a href="#/about">Method</a>
+    </nav>
+    <div class="header-tools">
+      <div class="search" id="global-search">
+        <span class="search__icon" aria-hidden="true">⌕</span>
+        <label class="sr-only" for="search-input">Search players</label>
+        <input class="input" id="search-input" type="search" placeholder="Search players…"
+               autocomplete="off" role="combobox" aria-expanded="false"
+               aria-controls="search-results" aria-autocomplete="list">
+        <div class="search__results" id="search-results" role="listbox" aria-label="Player results"></div>
+      </div>
+      <button class="btn btn--icon" id="theme-toggle" type="button"
+              title="Switch between light and dark" aria-label="Switch colour theme">◐</button>
+    </div>
+  </div>
+</header>
+
+<main id="main" tabindex="-1">
+  <div class="spinner" role="status" aria-label="Loading"></div>
+</main>
+
+<footer class="app-footer">
+  <div class="app-footer__inner">
+    <div id="footer-sources">Loading data sources…</div>
+    <div><a href="#/about">Method &amp; limitations</a></div>
+  </div>
+</footer>
+
+<script type="module" src="assets/js/main.js"></script>
+</body>
+</html>

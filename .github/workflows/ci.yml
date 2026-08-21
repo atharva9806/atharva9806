@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      # The pipeline is standard library only, so there is nothing to install.
+      - name: Python pipeline tests
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Build the demo dataset
+        run: python -m pipeline seed
+
+      - name: Verify the dataset
+        run: python scripts/check_dataset.py
+
+      - name: JavaScript analysis tests
+        run: node --test tests/js/*.test.mjs
+
+      # The demo dataset is committed, and it is reproducible by construction.
+      # If a change to the simulator or the pipeline alters it, that should be a
+      # deliberate, reviewed commit rather than a silent drift.
+      - name: Committed dataset matches a fresh build
+        run: |
+          if ! git diff --quiet -- web/data ':!web/data/manifest.json'; then
+            echo "::error::web/data differs from a fresh 'python -m pipeline seed'."
+            echo "Run 'make seed' and commit the result."
+            git diff --stat -- web/data ':!web/data/manifest.json'
+            exit 1
+          fi
+          echo "committed dataset is up to date"

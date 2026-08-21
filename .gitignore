@@ -1,0 +1,20 @@
+# Downloaded archives and cached HTTP responses
+.cache/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Node (only used for the test runner and screenshots)
+node_modules/
+package-lock.json
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
