@@ -34,8 +34,8 @@ CURATED = ROOT / "data" / "styles.csv"
 GENERATED = ROOT / "data" / "player_styles.csv"
 STYLE_CACHE = CACHE_DIR / "styles.json"
 
-FIELDS = ["name", "bowling_type", "batting_hand", "role", "country",
-          "cricinfo_id", "source"]
+FIELDS = ["name", "full_name", "bowling_type", "batting_hand", "role",
+          "country", "cricinfo_id", "source"]
 
 
 def load_csv(path: Path) -> dict[str, dict]:
@@ -56,6 +56,7 @@ def load_csv(path: Path) -> dict[str, dict]:
                                or (row.get("bowling_type") or "").strip(),
                 "battingHand": normalise_batting_style(row.get("batting_hand", ""))
                                or (row.get("batting_hand") or "").strip(),
+                "fullName": (row.get("full_name") or "").strip(),
                 "role": (row.get("role") or "").strip(),
                 "country": (row.get("country") or "").strip(),
                 "cricinfoId": (row.get("cricinfo_id") or "").strip(),
@@ -75,6 +76,7 @@ def save_csv(path: Path, records: dict[str, dict]) -> None:
                 "name": name,
                 "bowling_type": r.get("bowlingType", ""),
                 "batting_hand": r.get("battingHand", ""),
+                "full_name": r.get("fullName", ""),
                 "role": r.get("role", ""),
                 "country": r.get("country", ""),
                 "cricinfo_id": r.get("cricinfoId", ""),

@@ -36,8 +36,8 @@ IN_CRICINFO = "cricinfo_id"
 IN_FULL = "full_name"
 IN_DOB = "dob"
 
-OUT_FIELDS = ["name", "bowling_type", "batting_hand", "role", "country",
-              "cricinfo_id", "source"]
+OUT_FIELDS = ["name", "full_name", "bowling_type", "batting_hand", "role",
+              "country", "cricinfo_id", "source"]
 
 
 def _clean(value: str | None) -> str:
@@ -83,6 +83,9 @@ def convert(source: Path, dest: Path) -> dict:
             continue
         out.append({
             "name": name,
+            # Cricsheet names players "V Kohli"; people search "Virat Kohli".
+            # Carrying the full name is what makes that search work.
+            "full_name": _clean(row.get(IN_FULL)),
             "bowling_type": bowling,
             "batting_hand": hand,
             "role": _clean(row.get(IN_ROLE)),

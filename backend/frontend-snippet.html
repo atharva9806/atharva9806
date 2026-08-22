@@ -1,0 +1,115 @@
+<!-- ==========================================================================
+     Criclysis live analysis widget
+
+     Paste into any page. Set API_BASE to your Render URL.
+     Nothing here needs a build step or a framework.
+     ========================================================================== -->
+<div id="criclysis-live" class="cl-widget">
+  <form id="cl-form" class="cl-form">
+    <input id="cl-player" type="search" placeholder="Player name, e.g. Virat Kohli"
+           aria-label="Player name" required>
+    <button type="submit">Analyse</button>
+  </form>
+  <div id="cl-out" class="cl-out" aria-live="polite"></div>
+</div>
+
+<script>
+// Your Render service URL. No trailing slash.
+const API_BASE = "https://criclysis-api.onrender.com";
+
+const out = document.getElementById("cl-out");
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+  (c) => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+
+async function analysePlayer(player, matchId = null) {
+  // Render's free tier sleeps after inactivity, so the first request of the
+  // day can take the best part of a minute to wake the service. Say so rather
+  // than letting it look broken.
+  out.innerHTML = `<p class="cl-loading">Analysing ${esc(player)}…
+    <small>(first request may take up to a minute while the server wakes)</small></p>`;
+
+  const url = new URL(API_BASE + "/api/player-analysis");
+  url.searchParams.set("player", player);
+  if (matchId) url.searchParams.set("match_id", matchId);
+
+  try {
+    const res = await fetch(url, {
+      headers: { "Accept": "application/json" },
+      signal: AbortSignal.timeout(90000),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    render(data);
+  } catch (err) {
+    out.innerHTML = `<p class="cl-error">Could not analyse ${esc(player)} —
+      ${esc(err.message)}</p>`;
+  }
+}
+
+function render(d) {
+  const career = d.current_stats?.career || {};
+  const live = d.current_stats?.live_innings;
+
+  const careerRows = Object.entries(career).map(([fmt, s]) => s ? `
+    <tr><td>${esc(fmt.toUpperCase())}</td><td>${esc(s.runs)}</td>
+        <td>${esc(s.avg ?? "—")}</td><td>${esc(s.sr ?? "—")}</td></tr>` : "").join("");
+
+  out.innerHTML = `
+    <h3>${esc(d.player_name)}</h3>
+
+    ${d.meta?.degraded ? `<p class="cl-warn">Partial result: ${
+      esc((d.meta.notes || []).join(" "))}</p>` : ""}
+
+    ${careerRows ? `<table class="cl-table">
+      <thead><tr><th>Format</th><th>Runs</th><th>Avg</th><th>SR</th></tr></thead>
+      <tbody>${careerRows}</tbody></table>` : ""}
+
+    ${live ? `<p class="cl-live"><strong>Live:</strong> ${esc(live.runs)}
+      (${esc(live.balls_faced)} balls), SR ${esc(live.strike_rate ?? "—")},
+      dot-ball ${esc(live.dot_ball_percentage ?? "—")}%</p>` : ""}
+
+    <h4>Playing style</h4>
+    <p>${esc(d.playstyle?.summary)}</p>
+    ${d.playstyle?.tempo ? `<p class="cl-muted">${esc(d.playstyle.tempo)}</p>` : ""}
+
+    <h4>Weaknesses</h4>
+    <ul>${(d.weaknesses || []).map((w) => `
+      <li><strong>${esc(w.title)}</strong> — ${esc(w.detail)}
+        <span class="cl-chip">${esc(w.confidence)} confidence</span>
+        <br><small class="cl-muted">${esc(w.evidence)}</small></li>`).join("") ||
+      "<li>None identified.</li>"}</ul>
+
+    <h4>Tactical advice</h4>
+    <ul>${(d.tactical_advice || []).map((t) => `
+      <li><strong>${esc(t.phase)}:</strong> ${esc(t.recommendation)}
+        ${t.rationale ? `<br><small class="cl-muted">${esc(t.rationale)}</small>` : ""}
+      </li>`).join("") || "<li>No specific plan available.</li>"}</ul>
+
+    <p class="cl-muted cl-small">${esc(d.meta?.disclaimer || "")}
+      ${d.meta?.model ? `Model: ${esc(d.meta.model)}.` : ""}
+      ${d.cached ? "Served from cache." : ""}</p>`;
+}
+
+document.getElementById("cl-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const name = document.getElementById("cl-player").value.trim();
+  if (name) analysePlayer(name);
+});
+</script>
+
+<style>
+.cl-widget { font-family: system-ui, sans-serif; max-width: 720px; }
+.cl-form { display: flex; gap: .5rem; margin-bottom: 1rem; }
+.cl-form input { flex: 1; padding: .55rem .7rem; border: 1px solid #ccc; border-radius: 8px; }
+.cl-form button { padding: .55rem 1rem; border: 0; border-radius: 8px;
+  background: #2a78d6; color: #fff; font-weight: 600; cursor: pointer; }
+.cl-table { border-collapse: collapse; margin: .5rem 0; font-variant-numeric: tabular-nums; }
+.cl-table th, .cl-table td { padding: .3rem .7rem; border-bottom: 1px solid #eee; text-align: right; }
+.cl-table th:first-child, .cl-table td:first-child { text-align: left; }
+.cl-chip { font-size: .72rem; background: #eef; padding: .1rem .4rem; border-radius: 99px; }
+.cl-muted { color: #666; }
+.cl-small { font-size: .78rem; }
+.cl-warn { color: #8a6d00; background: #fff8e1; padding: .5rem .7rem; border-radius: 8px; }
+.cl-error { color: #b3261e; }
+.cl-live { background: #f0f7ff; padding: .5rem .7rem; border-radius: 8px; }
+</style>

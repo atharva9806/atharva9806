@@ -1,0 +1,25 @@
+# Render Blueprint. In Render: New > Blueprint, point at this repo.
+# Everything except the two secrets is set here, so the dashboard work is
+# limited to pasting the keys.
+services:
+  - type: web
+    name: criclysis-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120
+    healthCheckPath: /healthz
+    envVars:
+      - key: CRICKETDATA_API_KEY
+        sync: false          # set in the dashboard; never in source control
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: ALLOWED_ORIGINS
+        value: "*"
+      - key: CRICLYSIS_DATA_DIR
+        value: ../web/data
+      - key: PYTHON_VERSION
+        value: "3.11.9"
