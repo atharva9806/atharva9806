@@ -56,9 +56,18 @@ log = logging.getLogger("criclysis")
 CRICKETDATA_API_KEY = os.environ.get("CRICKETDATA_API_KEY", "").strip()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
-# gemini-2.5-flash is the default; gemini-1.5-flash also works. Kept in an env
-# var so a model change is a Render setting, not a redeploy of source.
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash").strip()
+# Default to the moving alias rather than a pinned version. Google retires
+# specific model ids for new API keys - "gemini-2.5-flash is no longer
+# available to new users" is a real 404 this code hit in testing - and an alias
+# survives that. Pin a version here only if you need reproducible output.
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest").strip()
+
+# Thinking costs latency and tokens. This is a short structured extraction, so
+# it is off by default; raise it if the analysis feels shallow. Models that do
+# not support the setting are handled by retrying without it.
+GEMINI_THINKING_BUDGET = int(os.environ.get("GEMINI_THINKING_BUDGET", "0"))
+GEMINI_RETRIES = int(os.environ.get("GEMINI_RETRIES", "3"))
+GEMINI_BACKOFF = float(os.environ.get("GEMINI_BACKOFF", "0.8"))
 
 CRICKETDATA_BASE = os.environ.get(
     "CRICKETDATA_BASE", "https://api.cricapi.com/v1").rstrip("/")
@@ -518,6 +527,18 @@ Rules you must follow:
 """
 
 
+def _transient(exc: Exception) -> bool:
+    """Is this error worth retrying?
+
+    Overload (503) and rate limiting (429) clear on their own; a bad model name
+    or malformed config never will, and retrying those just delays the
+    fallback the caller is waiting for.
+    """
+    text = str(exc)
+    return any(code in text for code in ("503", "429", "UNAVAILABLE",
+                                         "RESOURCE_EXHAUSTED", "deadline"))
+
+
 def build_prompt(player_name: str, live: dict | None, grounding: dict | None,
                  match_context: dict | None) -> str:
     blocks = [f"PLAYER: {player_name}"]
@@ -552,27 +573,53 @@ def gemini_analysis(player_name: str, live: dict | None, grounding: dict | None,
     from google.genai import types
 
     client = genai.Client(api_key=GEMINI_API_KEY)
-    config: dict[str, Any] = {
+    prompt = build_prompt(player_name, live, grounding, match_context)
+    base: dict[str, Any] = {
         "system_instruction": SYSTEM_INSTRUCTION,
         "response_mime_type": "application/json",
         "response_schema": RESPONSE_SCHEMA,
         "temperature": 0.3,
         "max_output_tokens": 2048,
     }
-    # 2.5 models think by default. For a short structured extraction that is
-    # latency and tokens spent for little gain, so it is turned down.
-    if "2.5" in GEMINI_MODEL:
-        config["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
 
-    response = client.models.generate_content(
-        model=GEMINI_MODEL,
-        contents=build_prompt(player_name, live, grounding, match_context),
-        config=types.GenerateContentConfig(**config),
-    )
-    text = (response.text or "").strip()
-    if not text:
-        raise RuntimeError("Gemini returned an empty response")
-    return json.loads(text)
+    # Try with the thinking budget, then without. Support for the setting
+    # varies by model generation, and a rejected config should not cost the
+    # whole analysis.
+    configs = [{**base, "thinking_config": types.ThinkingConfig(
+        thinking_budget=GEMINI_THINKING_BUDGET)}, base]
+
+    last: Exception | None = None
+    for config in configs:
+        for attempt in range(GEMINI_RETRIES):
+            if attempt:
+                # A shared flash model returns 503 under load often enough that
+                # not retrying means routinely falling back for no reason. The
+                # backoff is short because a browser is waiting on this.
+                time.sleep(GEMINI_BACKOFF * (2 ** (attempt - 1)))
+            try:
+                response = client.models.generate_content(
+                    model=GEMINI_MODEL,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(**config),
+                )
+            except Exception as exc:               # noqa: BLE001 - SDK raises broadly
+                last = exc
+                if _transient(exc):
+                    log.info("Gemini transient error (attempt %d): %s", attempt + 1, exc)
+                    continue
+                break                              # config problem: try the next config
+            text = (response.text or "").strip()
+            if not text:
+                last = RuntimeError("Gemini returned an empty response")
+                continue
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError as exc:
+                # response_schema should make this impossible; if it happens the
+                # raw text is more useful in the log than a bare parse error.
+                log.debug("unparseable Gemini response: %s", text[:400])
+                last = exc
+    raise last or RuntimeError("Gemini call failed")
 
 
 # ---------------------------------------------------------------------------
