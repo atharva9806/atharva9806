@@ -19,6 +19,7 @@ import {
 } from '../charts/index.js';
 import { figure, token } from '../charts/core.js';
 import { dataTable, simpleTable } from '../lib/table.js';
+import { liveReadSection } from './liveread.js';
 import {
   card, chip, coverageNotice, datasetNotice, emptyState, findingCard, formatSwitcher,
   orderFormats, statTile,
@@ -80,6 +81,9 @@ export async function render({ manifest, route, bySlug }) {
     if (payload.batting) body.appendChild(battingSection(record, payload, manifest, active, cohort));
     if (payload.bowling) body.appendChild(bowlingSection(record, payload, manifest, active, cohort));
     body.appendChild(findingsSection(payload));
+    // The AI panel sits below the computed findings on purpose: measured first,
+    // interpreted second.
+    body.appendChild(liveReadSection(record.name));
     if (payload.batting) body.appendChild(inningsSection(payload, active));
   }
 

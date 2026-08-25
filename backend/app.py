@@ -56,17 +56,38 @@ log = logging.getLogger("criclysis")
 CRICKETDATA_API_KEY = os.environ.get("CRICKETDATA_API_KEY", "").strip()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 
-# Default to the moving alias rather than a pinned version. Google retires
+# Default to moving aliases rather than pinned versions. Google retires
 # specific model ids for new API keys - "gemini-2.5-flash is no longer
 # available to new users" is a real 404 this code hit in testing - and an alias
-# survives that. Pin a version here only if you need reproducible output.
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-flash-latest").strip()
+# survives that.
+#
+# More than one model, in preference order, because the shared flash endpoints
+# return 503 under load independently of each other: in testing
+# gemini-flash-latest was persistently overloaded while the lite models
+# answered in under a second. Falling through to the next model turns a failed
+# analysis into a slightly smaller one. GEMINI_MODEL still works and simply
+# becomes the head of the list.
+# Order matters, and fast-and-available beats nominally-stronger. This job is
+# a structured extraction over evidence we supply, which the lite models do
+# well; the heavier flash alias was measured at 0.5-1s when free but spent
+# 20-30s failing under load. Leading with lite turned a 50% fallback rate into
+# near-100% success in under two seconds. The heavier model stays last as a
+# backstop.
+_DEFAULT_MODELS = "gemini-flash-lite-latest,gemini-3.1-flash-lite,gemini-flash-latest"
+GEMINI_MODELS = [m.strip() for m in os.environ.get(
+    "GEMINI_MODELS",
+    os.environ.get("GEMINI_MODEL", _DEFAULT_MODELS)).split(",") if m.strip()]
+GEMINI_MODEL = GEMINI_MODELS[0]
+
+# Hard ceiling on how long a browser waits before we hand it the computed
+# splits instead. Retrying past this point serves nobody.
+GEMINI_DEADLINE = float(os.environ.get("GEMINI_DEADLINE", "22"))
 
 # Thinking costs latency and tokens. This is a short structured extraction, so
 # it is off by default; raise it if the analysis feels shallow. Models that do
 # not support the setting are handled by retrying without it.
 GEMINI_THINKING_BUDGET = int(os.environ.get("GEMINI_THINKING_BUDGET", "0"))
-GEMINI_RETRIES = int(os.environ.get("GEMINI_RETRIES", "3"))
+GEMINI_RETRIES = int(os.environ.get("GEMINI_RETRIES", "2"))
 GEMINI_BACKOFF = float(os.environ.get("GEMINI_BACKOFF", "0.8"))
 
 CRICKETDATA_BASE = os.environ.get(
@@ -527,16 +548,23 @@ Rules you must follow:
 """
 
 
-def _transient(exc: Exception) -> bool:
-    """Is this error worth retrying?
+def _classify(exc: Exception) -> str:
+    """How should this failure be handled: retry, switch model, or give up?
 
-    Overload (503) and rate limiting (429) clear on their own; a bad model name
-    or malformed config never will, and retrying those just delays the
-    fallback the caller is waiting for.
+    The distinction matters more than it looks. A 503 is transient overload on
+    one model and clears in a second or two, so retrying is right. A 429 is a
+    per-model quota that we have already exhausted - the free tier allows as
+    few as 5 requests per minute on some models - and retrying it immediately
+    just spends quota we do not have while the caller waits. Since each model
+    has its own quota bucket, the productive response to a 429 is to move to
+    the next model, not to try the same one harder.
     """
     text = str(exc)
-    return any(code in text for code in ("503", "429", "UNAVAILABLE",
-                                         "RESOURCE_EXHAUSTED", "deadline"))
+    if "429" in text or "RESOURCE_EXHAUSTED" in text:
+        return "quota"
+    if "503" in text or "UNAVAILABLE" in text or "deadline" in text:
+        return "retry"
+    return "fatal"
 
 
 def build_prompt(player_name: str, live: dict | None, grounding: dict | None,
@@ -582,44 +610,59 @@ def gemini_analysis(player_name: str, live: dict | None, grounding: dict | None,
         "max_output_tokens": 2048,
     }
 
-    # Try with the thinking budget, then without. Support for the setting
-    # varies by model generation, and a rejected config should not cost the
-    # whole analysis.
+    # Two config shapes: with the thinking budget and without. Support varies by
+    # model generation, and a rejected config should not cost the analysis.
     configs = [{**base, "thinking_config": types.ThinkingConfig(
         thinking_budget=GEMINI_THINKING_BUDGET)}, base]
 
+    deadline = time.monotonic() + GEMINI_DEADLINE
     last: Exception | None = None
-    for config in configs:
-        for attempt in range(GEMINI_RETRIES):
-            if attempt:
-                # A shared flash model returns 503 under load often enough that
-                # not retrying means routinely falling back for no reason. The
-                # backoff is short because a browser is waiting on this.
-                time.sleep(GEMINI_BACKOFF * (2 ** (attempt - 1)))
-            try:
-                response = client.models.generate_content(
-                    model=GEMINI_MODEL,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(**config),
-                )
-            except Exception as exc:               # noqa: BLE001 - SDK raises broadly
-                last = exc
-                if _transient(exc):
-                    log.info("Gemini transient error (attempt %d): %s", attempt + 1, exc)
+
+    for model in GEMINI_MODELS:
+        quota_blocked = False
+        for config in configs:
+            if quota_blocked:
+                break
+            for attempt in range(GEMINI_RETRIES):
+                if time.monotonic() > deadline:
+                    raise last or RuntimeError("Gemini deadline exceeded")
+                if attempt:
+                    time.sleep(GEMINI_BACKOFF * (2 ** (attempt - 1)))
+                try:
+                    response = client.models.generate_content(
+                        model=model, contents=prompt,
+                        config=types.GenerateContentConfig(**config),
+                    )
+                except Exception as exc:           # noqa: BLE001 - SDK raises broadly
+                    last = exc
+                    kind = _classify(exc)
+                    if kind == "retry":
+                        log.info("%s overloaded (attempt %d), retrying",
+                                 model, attempt + 1)
+                        continue
+                    if kind == "quota":
+                        # Out of quota on this model. Another model has its own
+                        # bucket, so switch rather than wait or retry.
+                        log.info("%s quota exhausted, trying the next model", model)
+                        quota_blocked = True
+                        break
+                    log.info("%s rejected the request: %s", model, str(exc)[:110])
+                    break
+                text = (response.text or "").strip()
+                if not text:
+                    last = RuntimeError(f"{model} returned an empty response")
                     continue
-                break                              # config problem: try the next config
-            text = (response.text or "").strip()
-            if not text:
-                last = RuntimeError("Gemini returned an empty response")
-                continue
-            try:
-                return json.loads(text)
-            except json.JSONDecodeError as exc:
-                # response_schema should make this impossible; if it happens the
-                # raw text is more useful in the log than a bare parse error.
-                log.debug("unparseable Gemini response: %s", text[:400])
-                last = exc
-    raise last or RuntimeError("Gemini call failed")
+                try:
+                    parsed = json.loads(text)
+                except json.JSONDecodeError as exc:
+                    log.debug("unparseable response from %s: %s", model, text[:400])
+                    last = exc
+                    continue
+                if model != GEMINI_MODELS[0]:
+                    log.info("answered by fallback model %s", model)
+                parsed["_model"] = model
+                return parsed
+    raise last or RuntimeError("every Gemini model failed")
 
 
 # ---------------------------------------------------------------------------
@@ -696,7 +739,7 @@ def healthz():
         "status": "ok",
         "cricketdata_key": bool(CRICKETDATA_API_KEY),
         "gemini_key": bool(GEMINI_API_KEY),
-        "gemini_model": GEMINI_MODEL,
+        "gemini_models": GEMINI_MODELS,
         "grounding_dataset": (DATA_DIR / "players.json").exists(),
         "grounded_players": len(player_index()),
         "cache": cache.stats(),
@@ -798,10 +841,12 @@ def player_analysis():
     # --- 3. synthesis -----------------------------------------------------
     try:
         analysis = gemini_analysis(player_name, live_summary, grounding, match_context)
+        used_model = analysis.pop("_model", GEMINI_MODEL)
         source = "gemini"
     except Exception as exc:                       # noqa: BLE001 - never 500 on this
         log.warning("Gemini analysis failed for %r: %s", player_name, exc)
         analysis = offline_analysis(player_name, grounding, str(exc))
+        used_model = None
         source = "computed" if grounding else "fallback"
         degraded = True
         notes.append(f"AI synthesis unavailable: {exc}")
@@ -831,7 +876,7 @@ def player_analysis():
         "tactical_advice": analysis.get("tactical_advice", []),
         "meta": {
             "source": source,
-            "model": GEMINI_MODEL if source == "gemini" else None,
+            "model": used_model,
             "grounded": grounding is not None,
             "live_data": live_summary is not None,
             "degraded": degraded,
