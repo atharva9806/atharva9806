@@ -1,0 +1,24 @@
+# Node / Next.js
+node_modules/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Downloaded archives and generated data (built by CI, never committed)
+.cache/
+data/out/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

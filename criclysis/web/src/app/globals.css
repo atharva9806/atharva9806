@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Inter, system-ui, sans-serif;
+  --color-ink: #1d1d1f;
+  --color-mute: #6e6e73;
+  --color-accent: #0071e3;
+  --color-surface: #f5f5f7;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: #fbfbfd;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  letter-spacing: -0.01em;
+}
+
+::selection {
+  background: rgba(0, 113, 227, 0.2);
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+.card {
+  background: #fff;
+  border-radius: 1.5rem;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 8px 30px rgba(0, 0, 0, 0.05);
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.35s;
+}
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.05),
+    0 20px 50px rgba(0, 0, 0, 0.1);
+}
+
+.dark-card {
+  background: linear-gradient(160deg, #1d1d1f 0%, #000 100%);
+  color: #f5f5f7;
+  border-radius: 1.5rem;
+}
+
+.headline {
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.02;
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, #0071e3, #7d3cff 45%, #ff375f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gradient-mesh {
+  background:
+    radial-gradient(60% 60% at 20% 10%, rgba(0, 113, 227, 0.18), transparent 60%),
+    radial-gradient(50% 50% at 85% 20%, rgba(255, 55, 95, 0.14), transparent 60%),
+    radial-gradient(60% 60% at 60% 90%, rgba(125, 60, 255, 0.14), transparent 60%);
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.fade-up {
+  animation: fadeUp 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.4; }
+}
+.live-dot {
+  animation: pulseDot 1.4s ease-in-out infinite;
+}
+
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.ticker-track {
+  animation: ticker 40s linear infinite;
+}
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.pop-in {
+  animation: popIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.btn-primary {
+  @apply inline-flex items-center gap-2 rounded-full bg-[#0071e3] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[#0077ed] active:scale-[0.98];
+}
+.btn-ghost {
+  @apply inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-[#0071e3] transition hover:underline;
+}
+
+.table-apple th {
+  @apply sticky top-0 z-10 bg-white/90 px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#6e6e73] backdrop-blur;
+}
+.table-apple td {
+  @apply px-4 py-3.5 text-sm;
+}
+.table-apple tbody tr {
+  @apply border-t border-black/5 transition hover:bg-[#f5f5f7];
+}
+
+.segment {
+  @apply inline-flex rounded-full bg-[#e8e8ed] p-1 text-sm;
+}
+.segment button {
+  @apply rounded-full px-4 py-1.5 font-medium text-[#1d1d1f]/70 transition;
+}
+.segment button[data-active="true"] {
+  @apply bg-white text-[#1d1d1f] shadow-sm;
+}
+
+input, select {
+  @apply outline-none;
+}
+
+.recharts-default-tooltip {
+  border-radius: 14px !important;
+  border: none !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+}
