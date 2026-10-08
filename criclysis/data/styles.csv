@@ -1,0 +1,97 @@
+# Curated player styles.
+#
+# Cricsheet ball-by-ball data names the bowler but never says what kind of
+# bowler they are, and that single attribute is what the entire matchup
+# analysis turns on. This file is the authoritative source for it: it is read
+# first, it overrides anything the enrichment step scraped, and it is where
+# corrections belong.
+#
+# The `name` column must match the name Cricsheet uses, which is the
+# `unique_name` column of https://cricsheet.org/register/people.csv (initials
+# then surname for most players, full name for many from the subcontinent).
+# A name that does not match simply has no effect - it will not raise an error -
+# so after editing, check the build summary: `python -m pipeline build` reports
+# how many bowlers are still missing a style, and the Method page shows the
+# same number per format.
+#
+# bowling_type accepts either the short key (rf, rfm, rm, lf, lfm, lm, ob, lb,
+# sla, slc) or free text such as "Right arm fast-medium", which is normalised
+# by pipeline/styles.py.
+#
+# This list covers frequently encountered international bowlers as a starting
+# point. It is not exhaustive, and it does not need to be: anything missing
+# falls back to the enrichment step, or simply drops out of the bowling-type
+# splits while every other statistic on the site is unaffected.
+name,bowling_type,batting_hand,role,country,cricinfo_id,source
+JJ Bumrah,rf,right,Bowler,India,,curated
+R Ashwin,ob,right,Bowling all-rounder,India,,curated
+RA Jadeja,sla,left,Batting all-rounder,India,,curated
+Mohammed Shami,rfm,right,Bowler,India,,curated
+Mohammed Siraj,rfm,right,Bowler,India,,curated
+YS Chahal,lb,right,Bowler,India,,curated
+Kuldeep Yadav,slc,left,Bowler,India,,curated
+B Kumar,rm,right,Bowler,India,,curated
+UT Yadav,rf,right,Bowler,India,,curated
+Washington Sundar,ob,left,Bowling all-rounder,India,,curated
+A Kumble,lb,right,Bowler,India,,curated
+Harbhajan Singh,ob,right,Bowler,India,,curated
+Z Khan,lfm,right,Bowler,India,,curated
+I Sharma,rfm,right,Bowler,India,,curated
+PJ Cummins,rf,right,Bowler,Australia,,curated
+MA Starc,lf,left,Bowler,Australia,,curated
+JR Hazlewood,rfm,right,Bowler,Australia,,curated
+NM Lyon,ob,right,Bowler,Australia,,curated
+A Zampa,lb,right,Bowler,Australia,,curated
+MP Stoinis,rm,right,Batting all-rounder,Australia,,curated
+SK Warne,lb,right,Bowler,Australia,,curated
+GD McGrath,rfm,right,Bowler,Australia,,curated
+B Lee,rf,right,Bowler,Australia,,curated
+MG Johnson,lf,left,Bowler,Australia,,curated
+SCG MacGill,lb,right,Bowler,Australia,,curated
+JM Anderson,rfm,left,Bowler,England,,curated
+SCJ Broad,rfm,left,Bowler,England,,curated
+JC Archer,rf,right,Bowler,England,,curated
+MA Wood,rf,right,Bowler,England,,curated
+OE Robinson,rfm,right,Bowler,England,,curated
+MJ Leach,sla,left,Bowler,England,,curated
+AU Rashid,lb,right,Bowler,England,,curated
+BA Stokes,rfm,left,Batting all-rounder,England,,curated
+CR Woakes,rfm,right,Bowling all-rounder,England,,curated
+K Rabada,rf,left,Bowler,South Africa,,curated
+A Nortje,rf,right,Bowler,South Africa,,curated
+L Ngidi,rf,right,Bowler,South Africa,,curated
+KA Maharaj,sla,right,Bowler,South Africa,,curated
+M Jansen,lfm,left,Bowling all-rounder,South Africa,,curated
+DW Steyn,rf,right,Bowler,South Africa,,curated
+M Morkel,rf,right,Bowler,South Africa,,curated
+TA Boult,lfm,left,Bowler,New Zealand,,curated
+TG Southee,rfm,right,Bowler,New Zealand,,curated
+MJ Henry,rfm,right,Bowler,New Zealand,,curated
+MJ Santner,sla,left,Bowling all-rounder,New Zealand,,curated
+IS Sodhi,lb,right,Bowler,New Zealand,,curated
+DL Vettori,sla,left,Bowling all-rounder,New Zealand,,curated
+Shaheen Shah Afridi,lf,left,Bowler,Pakistan,,curated
+Haris Rauf,rf,right,Bowler,Pakistan,,curated
+Naseem Shah,rf,right,Bowler,Pakistan,,curated
+Shadab Khan,lb,right,Bowling all-rounder,Pakistan,,curated
+Mohammad Nawaz,sla,left,Bowling all-rounder,Pakistan,,curated
+Wasim Akram,lf,left,Bowling all-rounder,Pakistan,,curated
+Waqar Younis,rf,right,Bowler,Pakistan,,curated
+Saeed Ajmal,ob,right,Bowler,Pakistan,,curated
+Rashid Khan,lb,right,Bowling all-rounder,Afghanistan,,curated
+Mujeeb Ur Rahman,ob,right,Bowler,Afghanistan,,curated
+Mohammad Nabi,ob,right,Batting all-rounder,Afghanistan,,curated
+PWH de Silva,lb,right,Bowling all-rounder,Sri Lanka,,curated
+M Theekshana,ob,right,Bowler,Sri Lanka,,curated
+M Muralitharan,ob,right,Bowler,Sri Lanka,,curated
+BAW Mendis,lb,right,Bowler,Sri Lanka,,curated
+Shakib Al Hasan,sla,left,Batting all-rounder,Bangladesh,,curated
+Mehidy Hasan Miraz,ob,right,Bowling all-rounder,Bangladesh,,curated
+Taskin Ahmed,rf,right,Bowler,Bangladesh,,curated
+Mustafizur Rahman,lfm,left,Bowler,Bangladesh,,curated
+JO Holder,rfm,right,Bowling all-rounder,West Indies,,curated
+AS Joseph,rf,right,Bowler,West Indies,,curated
+SP Narine,ob,left,Bowling all-rounder,West Indies,,curated
+A Hosein,sla,left,Bowler,West Indies,,curated
+CEL Ambrose,rf,right,Bowler,West Indies,,curated
+CA Walsh,rf,right,Bowler,West Indies,,curated
