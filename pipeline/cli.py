@@ -6,6 +6,8 @@
     python -m pipeline rankings
     python -m pipeline all
     python -m pipeline seed     # generate the bundled demo dataset
+    python -m pipeline winprob  # fit and validate the win-probability model
+    python -m pipeline replays  # export featured matches for replay mode
 
 ``build`` is the one that matters: it streams the downloaded archives, fills the
 aggregates, runs the strengths/weaknesses analysis and writes web/data.
@@ -202,6 +204,22 @@ def cmd_seed(args) -> int:
     return build_seed(Path(args.out), pretty=args.pretty)
 
 
+def cmd_winprob(args) -> int:
+    from .winprob import build
+    try:
+        build(tuple(args.formats), Path(args.out))
+    except FileNotFoundError as exc:
+        log.error("%s", exc)
+        return 1
+    return 0
+
+
+def cmd_replays(args) -> int:
+    from .replay import export_replays
+    index = export_replays(out_dir=Path(args.out))
+    return 0 if index else 1
+
+
 def cmd_all(args) -> int:
     for step in (cmd_fetch, cmd_build):
         code = step(args)
@@ -261,6 +279,15 @@ def build_parser() -> argparse.ArgumentParser:
     p_seed.add_argument("--out", default=str(WEB_DATA_DIR))
     p_seed.add_argument("--pretty", action="store_true")
     p_seed.set_defaults(func=cmd_seed)
+
+    p_wp = sub.add_parser("winprob", help="fit and validate the win-probability model")
+    p_wp.add_argument("--formats", nargs="+", default=["odi", "t20i"], choices=["odi", "t20i"])
+    p_wp.add_argument("--out", default=str(WEB_DATA_DIR))
+    p_wp.set_defaults(func=cmd_winprob)
+
+    p_rp = sub.add_parser("replays", help="export featured matches for replay mode")
+    p_rp.add_argument("--out", default=str(WEB_DATA_DIR))
+    p_rp.set_defaults(func=cmd_replays)
 
     p_all = sub.add_parser("all", help="fetch then build")
     add_formats(p_all)
